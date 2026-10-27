@@ -104,17 +104,17 @@ paths:
           example: 1
       responses:
         "200":
-          description: The requested ad.
+          description: The requested ad, with its owner's username.
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Ad"
+                $ref: "#/components/schemas/GetAdResponse"
         "400":
           description: adID is not a valid integer.
         "404":
           description: No ad exists with this ID.
         "500":
-          description: Unexpected server error.
+          description: Unexpected server error, including when the owner cannot be fetched from the users service.
 
     delete:
       summary: Delete an ad by ID
@@ -180,6 +180,17 @@ components:
           type: string
           format: date-time
           example: "2024-01-15T10:00:00Z"
+
+    GetAdResponse:
+      allOf:
+        - $ref: "#/components/schemas/Ad"
+        - type: object
+          required: [username]
+          properties:
+            username:
+              type: string
+              description: Nickname of the ad's owner, from the users service. Empty when the owner no longer exists.
+              example: alice
 
     ListAdsResponse:
       type: object

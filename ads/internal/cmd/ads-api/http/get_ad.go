@@ -7,7 +7,6 @@ import (
 	"time"
 
 	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
-	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 )
 
@@ -18,16 +17,18 @@ type getAdResponse struct {
 	PhotoURL   string    `json:"photo_url"`
 	UserID     string    `json:"user_id"`
 	CreatedAt  time.Time `json:"created_at"`
+	UserName   string    `json:"username"`
 }
 
-func adToGetAdResponse(a domain.Ad) getAdResponse {
+func adToGetAdResponse(ad usecase.GetAdByIDResponse) getAdResponse {
 	return getAdResponse{
-		ID:         int64(a.ID),
-		Title:      a.Title,
-		PriceCents: a.Price,
-		PhotoURL:   a.PhotoURL,
-		UserID:     a.UserID.String(),
-		CreatedAt:  a.CreatedAt.UTC(),
+		ID:         int64(ad.ID),
+		Title:      ad.Title,
+		PriceCents: ad.Price,
+		PhotoURL:   ad.PhotoURL,
+		UserID:     ad.UserID.String(),
+		CreatedAt:  ad.CreatedAt.UTC(),
+		UserName:   ad.UserName,
 	}
 }
 
