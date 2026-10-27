@@ -9,7 +9,7 @@ Please refer to [these instructions](INSTRUCTIONS.md).
 
 # Ads API
 
-A small Go HTTP API around a single domain: *ads* (classified ads).
+A small Go HTTP API around a single domain: _ads_ (classified ads).
 
 The API needs an up-and-running postgres database, which can be launched via the provided Docker Compose file.
 
@@ -29,17 +29,19 @@ This starts PostgreSQL with the schema and seed data already applied, as well as
 ## Model
 
 There are 2 entities in this sample:
+
 - ad (title, price, etc...)
 - user (id and nickname only)
 
 ## API
 
 | Method | Path          | Auth | Description                                                                       |
-|--------|---------------|------|-----------------------------------------------------------------------------------|
-| `POST` | `/ads`        | yes | Create an ad                                                                      |
-| `GET` | `/ads/{id}`   | no | Get a single ad                                                                   |
-| `GET` | `/ads`        | no | List ads (filterable by `title`, `user_id`, `min_price_cents`, `max_price_cents`) |
-| `POST` | `/ads/import` | yes | Bulk ad import                                                                    |
+| ------ | ------------- | ---- | --------------------------------------------------------------------------------- |
+| `POST` | `/ads`        | yes  | Create an ad                                                                      |
+| `GET`  | `/ads/{id}`   | no   | Get a single ad                                                                   |
+| `GET`  | `/ads`        | no   | List ads (filterable by `title`, `user_id`, `min_price_cents`, `max_price_cents`) |
+| `POST` | `/ads/import` | yes  | Bulk ad import                                                                    |
+| `DELETE` | `/ads/{id}` | yes  | Delete an ad owned by the caller                                                  |
 
 ```bash
 # Health check
@@ -56,6 +58,10 @@ curl -s -X POST http://localhost:8080/ads \
   -H 'Authorization: 00000000-0000-0000-0000-000000000001' \
   -H 'Content-Type: application/json' \
   -d '{"title":"Mountain bike","price_cents":12000,"photo_url":"https://example.com/photos/bike.jpg"}'
+
+# Delete an ad (requires Authorization header from the ad owner, answers 204 with no body)
+curl -s -i -X DELETE http://localhost:8080/ads/3 \
+  -H 'Authorization: 00000000-0000-0000-0000-000000000001'
 ```
 
 ## Authentication

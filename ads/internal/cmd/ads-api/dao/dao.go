@@ -14,6 +14,8 @@ type Store interface {
 	GetAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error)
 	// SearchAds returns all ads matching the filters.
 	SearchAds(ctx context.Context, req SearchAdsRequest) ([]domain.Ad, error)
+	// DeleteAdByID deletes a single ad, or returns ErrNotFound.
+	DeleteAdByID(ctx context.Context, id domain.AdID) error
 }
 
 // DAO stores and retrieves ads.
@@ -53,6 +55,8 @@ const (
 	ErrNotFound sentinelError = "ad not found"
 	// ErrUnknownOwner is returned when an ad references a user that does not exist.
 	ErrUnknownOwner sentinelError = "unknown owner"
+	// ErrForbidden is returned when a user is trying to interact with an ad they do not own.
+	ErrForbidden sentinelError = "forbidden"
 )
 
 type sentinelError string
