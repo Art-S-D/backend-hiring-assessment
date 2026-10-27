@@ -16,7 +16,7 @@ import (
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/common/middleware"
 )
 
-func newImportAdsServer(fn usecase.CreateAdFunc) *httptest.Server {
+func newImportAdsServer(fn usecase.ImportAdsFunc) *httptest.Server {
 	mux := http.NewServeMux()
 	mux.Handle("POST /ads/import", middleware.RequireAuth(handlerImportAds(fn)))
 	return httptest.NewServer(mux)
@@ -24,12 +24,8 @@ func newImportAdsServer(fn usecase.CreateAdFunc) *httptest.Server {
 
 func TestHandlerImportAds(t *testing.T) {
 	t.Run("returns 201 with all generated IDs on success", func(t *testing.T) {
-		ids := []domain.AdID{10, 11, 12}
-		call := 0
-		srv := newImportAdsServer(func(_ context.Context, _ usecase.CreateAdRequest) (domain.AdID, error) {
-			id := ids[call]
-			call++
-			return id, nil
+		srv := newImportAdsServer(func(_ context.Context, _ usecase.ImportAdsRequest) ([]domain.AdID, error) {
+			return []domain.AdID{10, 11, 12}, nil
 		})
 		defer srv.Close()
 
@@ -48,11 +44,11 @@ func TestHandlerImportAds(t *testing.T) {
 		assert.Equal(t, []int64{10, 11, 12}, got.IDs)
 	})
 
-	t.Run("passes authenticated user ID as owner for every ad", func(t *testing.T) {
-		var received []usecase.CreateAdRequest
-		srv := newImportAdsServer(func(_ context.Context, req usecase.CreateAdRequest) (domain.AdID, error) {
-			received = append(received, req)
-			return domain.AdID(len(received)), nil
+	t.Run("passes every ad and the authenticated user ID as owner", func(t *testing.T) {
+		var received usecase.ImportAdsRequest
+		srv := newImportAdsServer(func(_ context.Context, req usecase.ImportAdsRequest) ([]domain.AdID, error) {
+			received = req
+			return []domain.AdID{1, 2}, nil
 		})
 		defer srv.Close()
 
@@ -64,15 +60,18 @@ func TestHandlerImportAds(t *testing.T) {
 		defer resp.Body.Close()
 
 		require.Equal(t, http.StatusCreated, resp.StatusCode)
-		require.Len(t, received, 2)
-		assert.Equal(t, domain.UserID("user-42"), received[0].OwnerID)
-		assert.Equal(t, domain.UserID("user-42"), received[1].OwnerID)
+		assert.Equal(t, usecase.ImportAdsRequest{
+			OwnerID: "user-42",
+			Ads: []usecase.ImportedAd{
+				{Title: "bike", PriceCents: 5000, PhotoURL: "https://example.com/bike.jpg"},
+				{Title: "scooter", PriceCents: 8000, PhotoURL: "https://example.com/scooter.jpg"},
+			},
+		}, received)
 	})
 
 	t.Run("returns 201 with empty IDs when body has no ads", func(t *testing.T) {
-		srv := newImportAdsServer(func(_ context.Context, _ usecase.CreateAdRequest) (domain.AdID, error) {
-			t.Fatal("usecase should not be called")
-			return 0, nil
+		srv := newImportAdsServer(func(_ context.Context, _ usecase.ImportAdsRequest) ([]domain.AdID, error) {
+			return []domain.AdID{}, nil
 		})
 		defer srv.Close()
 
@@ -87,9 +86,9 @@ func TestHandlerImportAds(t *testing.T) {
 	})
 
 	t.Run("returns 401 when Authorization header is missing", func(t *testing.T) {
-		srv := newImportAdsServer(func(_ context.Context, _ usecase.CreateAdRequest) (domain.AdID, error) {
+		srv := newImportAdsServer(func(_ context.Context, _ usecase.ImportAdsRequest) ([]domain.AdID, error) {
 			t.Fatal("usecase should not be called")
-			return 0, nil
+			return nil, nil
 		})
 		defer srv.Close()
 
@@ -100,9 +99,9 @@ func TestHandlerImportAds(t *testing.T) {
 	})
 
 	t.Run("returns 400 on invalid body", func(t *testing.T) {
-		srv := newImportAdsServer(func(_ context.Context, _ usecase.CreateAdRequest) (domain.AdID, error) {
+		srv := newImportAdsServer(func(_ context.Context, _ usecase.ImportAdsRequest) ([]domain.AdID, error) {
 			t.Fatal("usecase should not be called")
-			return 0, nil
+			return nil, nil
 		})
 		defer srv.Close()
 
@@ -117,26 +116,18 @@ func TestHandlerImportAds(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
-	t.Run("returns 500 and stops on first usecase error", func(t *testing.T) {
-		call := 0
-		srv := newImportAdsServer(func(_ context.Context, _ usecase.CreateAdRequest) (domain.AdID, error) {
-			call++
-			if call == 2 {
-				return 0, errors.New("db down")
-			}
-			return domain.AdID(call), nil
+	t.Run("returns 500 on usecase error", func(t *testing.T) {
+		srv := newImportAdsServer(func(_ context.Context, _ usecase.ImportAdsRequest) ([]domain.AdID, error) {
+			return nil, errors.New("db down")
 		})
 		defer srv.Close()
 
 		body := importAdsBody{Ads: []createAdBody{
 			{Title: "bike", PriceCents: 5000, PhotoURL: "https://example.com/bike.jpg"},
-			{Title: "scooter", PriceCents: 8000, PhotoURL: "https://example.com/scooter.jpg"},
-			{Title: "car", PriceCents: 200000, PhotoURL: "https://example.com/car.jpg"},
 		}}
 		resp := postJSON(t, srv.URL+"/ads/import", body, "user-1")
 		defer resp.Body.Close()
 
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
-		assert.Equal(t, 2, call)
 	})
 }

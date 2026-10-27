@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
@@ -28,7 +29,11 @@ func (uc deleteAdByID) deleteAdByID(ctx context.Context, id domain.AdID, callerI
 	if err != nil {
 		return fmt.Errorf("unable to start transaction: %w", err)
 	}
-	defer func() { _ = tx.Rollback() }()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			slog.ErrorContext(ctx, "unable to roll back delete transaction", "ad_id", id, "error", err)
+		}
+	}()
 
 	ad, err := tx.GetAdByID(ctx, id)
 	if err != nil {
