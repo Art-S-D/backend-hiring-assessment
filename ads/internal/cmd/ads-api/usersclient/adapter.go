@@ -11,7 +11,7 @@ import (
 
 // Adapter makes api.Client satisfy usersPkg.UserClient, which it does not implement.
 // It takes a plain string identifier and returns its own User type.
-// The proper fix belongs in /users, but I was explicitly told not to touch it.
+// The proper fix belongs in /users but it cannot be modified.
 type Adapter struct {
 	client *api.Client
 }
