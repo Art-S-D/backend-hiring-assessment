@@ -86,6 +86,8 @@ paths:
           description: Malformed or unknown request body field.
         "401":
           description: Missing Authorization header.
+        "429":
+          description: The user already published 5 ads in the last 24 hours (rolling window). Ads created through the bulk import do not count.
         "500":
           description: Unexpected server error.
 

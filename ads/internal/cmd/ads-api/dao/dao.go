@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"time"
 
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 )
@@ -16,6 +17,11 @@ type Store interface {
 	SearchAds(ctx context.Context, req SearchAdsRequest) ([]domain.Ad, error)
 	// DeleteAdByID deletes a single ad, or returns ErrNotFound.
 	DeleteAdByID(ctx context.Context, id domain.AdID) error
+
+	// RecordPublication logs that the user published the ad through the single ad creation, so it counts towards their quota.
+	RecordPublication(ctx context.Context, ownerID domain.UserID, adID domain.AdID) error
+	// CountPublicationsSince returns how many ads the user published within the given window, up to now.
+	CountPublicationsSince(ctx context.Context, ownerID domain.UserID, window time.Duration) (int, error)
 }
 
 // DAO stores and retrieves ads.
@@ -57,6 +63,8 @@ const (
 	ErrUnknownOwner sentinelError = "unknown owner"
 	// ErrForbidden is returned when a user is trying to interact with an ad they do not own.
 	ErrForbidden sentinelError = "forbidden"
+	// ErrQuotaExceeded is returned when a user has already published as many ads as allowed in the current window.
+	ErrQuotaExceeded sentinelError = "publication quota exceeded"
 )
 
 type sentinelError string

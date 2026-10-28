@@ -195,6 +195,33 @@ func (d *DAO) DeleteAdByID(ctx context.Context, id domain.AdID) error {
 	return nil
 }
 
+// RecordPublication logs that the user published the ad through the single ad creation, so it counts towards their quota.
+func (d *DAO) RecordPublication(ctx context.Context, ownerID domain.UserID, adID domain.AdID) error {
+	const query = `INSERT INTO ad_publications (ad_id, user_id) VALUES ($1, $2::uuid)`
+
+	if _, err := d.runner().ExecContext(ctx, query, int64(adID), string(ownerID)); err != nil {
+		return fmt.Errorf("unable to record publication: %w", err)
+	}
+
+	return nil
+}
+
+// CountPublicationsSince returns how many ads the user published within the given window, up to now.
+func (d *DAO) CountPublicationsSince(ctx context.Context, ownerID domain.UserID, window time.Duration) (int, error) {
+	const query = `
+		SELECT count(*)
+		FROM ad_publications
+		WHERE user_id = $1::uuid
+		  AND published_at > now() - make_interval(secs => $2)`
+
+	var count int
+	if err := d.runner().QueryRowContext(ctx, query, string(ownerID), window.Seconds()).Scan(&count); err != nil {
+		return 0, fmt.Errorf("unable to count publications: %w", err)
+	}
+
+	return count, nil
+}
+
 func scanAd(row *sql.Row) (domain.Ad, error) {
 	var ad domain.Ad
 	if err := row.Scan(&ad.ID, &ad.Title, &ad.Price, &ad.PhotoURL, &ad.UserID, &ad.CreatedAt); err != nil {

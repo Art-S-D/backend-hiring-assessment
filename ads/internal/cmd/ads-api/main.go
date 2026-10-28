@@ -37,7 +37,10 @@ func run() error {
 	usersClient := usersclient.New(api.NewClient(cfg.IdentityURL, cfg.IdentityTimeout))
 
 	router := http.NewRouter(http.Usecases{
-		CreateAd:  usecase.NewCreateAdFunc(adDAO),
+		CreateAd: usecase.NewCreateAdFunc(adDAO, usecase.PublicationQuota{
+			Max:    cfg.MaxPublications,
+			Window: cfg.PublicationWindow,
+		}),
 		GetAd:     usecase.NewGetAdByIDFunc(adDAO, usersClient),
 		ListAds:   usecase.NewListAdsFunc(adDAO),
 		DeleteAd:  usecase.NewDeleteAdByIDFunc(adDAO),

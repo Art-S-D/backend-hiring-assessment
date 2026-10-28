@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -15,16 +16,31 @@ type Config struct {
 	IdentityURL string
 	// IdentityTimeout bounds every call to the identity service.
 	IdentityTimeout time.Duration
+	// MaxPublications is how many ads a user can publish through POST /ads within PublicationWindow.
+	MaxPublications int
+	// PublicationWindow is the rolling window MaxPublications applies to.
+	PublicationWindow time.Duration
 }
 
 // Load reads the configuration from the environment.
 func Load() Config {
 	return Config{
-		HTTPAddr:        text("HTTP_ADDR", ":8080"),
-		DatabaseURL:     text("DATABASE_URL", "postgres://ads:ads@localhost:5432/ads?sslmode=disable"),
-		IdentityURL:     text("IDENTITY_URL", "http://localhost:8081"),
-		IdentityTimeout: duration("IDENTITY_TIMEOUT", 2*time.Second),
+		HTTPAddr:          text("HTTP_ADDR", ":8080"),
+		DatabaseURL:       text("DATABASE_URL", "postgres://ads:ads@localhost:5432/ads?sslmode=disable"),
+		IdentityURL:       text("IDENTITY_URL", "http://localhost:8081"),
+		IdentityTimeout:   duration("IDENTITY_TIMEOUT", 2*time.Second),
+		MaxPublications:   integer("MAX_PUBLICATIONS", 5),
+		PublicationWindow: duration("PUBLICATION_WINDOW", 24*time.Hour),
 	}
+}
+
+func integer(name string, fallback int) int {
+	value, err := strconv.Atoi(os.Getenv(name))
+	if err != nil {
+		return fallback
+	}
+
+	return value
 }
 
 func text(name, fallback string) string {

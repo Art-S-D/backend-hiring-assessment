@@ -2,8 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/common/middleware"
 )
@@ -34,7 +36,12 @@ func handlerCreateAd(createAd usecase.CreateAdFunc) http.HandlerFunc {
 			OwnerID:    middleware.UserIDFromHeader(r),
 		})
 		if err != nil {
-			rw.WriteHeader(http.StatusInternalServerError)
+			if errors.Is(err, adsdao.ErrQuotaExceeded) {
+				rw.WriteHeader(http.StatusTooManyRequests)
+			} else {
+				rw.WriteHeader(http.StatusInternalServerError)
+			}
+
 			return
 		}
 

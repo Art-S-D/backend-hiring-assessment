@@ -237,6 +237,65 @@ func TestCreateAd(t *testing.T) {
 	})
 }
 
+func TestRecordPublication(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("inserts the publication", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+		mock.ExpectExec("INSERT INTO ad_publications").
+			WithArgs(int64(7), "user-1").
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		err := dao.RecordPublication(ctx, "user-1", 7)
+
+		require.NoError(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error on exec failure", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+		boom := errors.New("db down")
+		mock.ExpectExec("INSERT INTO ad_publications").
+			WithArgs(int64(7), "user-1").
+			WillReturnError(boom)
+
+		err := dao.RecordPublication(ctx, "user-1", 7)
+
+		assert.ErrorIs(t, err, boom)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestCountPublicationsSince(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("returns the count within the window", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+		mock.ExpectQuery("SELECT count").
+			WithArgs("user-1", float64(86400)).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(int64(3)))
+
+		got, err := dao.CountPublicationsSince(ctx, "user-1", 24*time.Hour)
+
+		require.NoError(t, err)
+		assert.Equal(t, 3, got)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error on query failure", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+		boom := errors.New("db down")
+		mock.ExpectQuery("SELECT count").
+			WithArgs("user-1", float64(86400)).
+			WillReturnError(boom)
+
+		_, err := dao.CountPublicationsSince(ctx, "user-1", 24*time.Hour)
+
+		assert.ErrorIs(t, err, boom)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
 func TestTransaction(t *testing.T) {
 	ctx := context.Background()
 	req := adsdao.CreateAdRequest{
